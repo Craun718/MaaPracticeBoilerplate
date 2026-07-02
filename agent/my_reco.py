@@ -3,6 +3,7 @@ from maa.custom_recognition import CustomRecognition
 from maa.context import Context
 
 
+# 数字比大小并返回较小的
 @AgentServer.custom_recognition("my_reco_222")
 class MyRecongition(CustomRecognition):
 
@@ -12,23 +13,46 @@ class MyRecongition(CustomRecognition):
         argv: CustomRecognition.AnalyzeArg,
     ) -> CustomRecognition.AnalyzeResult:
 
-        reco_detail = context.run_recognition(
-            "MyCustomOCR",
-            argv.image,
-            pipeline_override={"MyCustomOCR": {"roi": [100, 100, 200, 300]}},
-        )
+        rois = [
+            [100, 100, 200, 100],
+            [300, 100, 200, 100],
+        ]
 
-        # context is a reference, will override the pipeline for whole task
-        context.override_pipeline({"MyCustomOCR": {"roi": [1, 1, 114, 514]}})
-        # context.run_recognition ...
+        res = []
 
-        # make a new context to override the pipeline, only for itself
-        new_context = context.clone()
-        new_context.override_pipeline({"MyCustomOCR": {"roi": [100, 200, 300, 400]}})
-        reco_detail = new_context.run_recognition("MyCustomOCR", argv.image)
+        for roi in rois:
+            # 找到 pipeline 中名为 "MyCustomOCR" 的节点，并执行他的识别逻辑
+            reco_detail = context.run_recognition(
+                "MyCustomOCR",
+                argv.image,  # 使用当前获取到的图片
+                pipeline_override={  # 临时覆盖节点参数
+                    "MyCustomOCR": {  # 要覆盖的节点的名称
+                        "roi": roi,
+                        "only_rec": True,  # 不进行文本检测，直接进行识别
+                    }
+                },
+            )
 
-        context.override_next(argv.node_name, ["TaskA", "TaskB"])
+            if reco_detail is None or not reco_detail.hit:
+                print(f"无法读取到内容 {roi}")
+                res.append(None)
+                continue
 
+            text = str(reco_detail.best_result.text)
+            if not text.isdigit():
+                print(f"{text} 不是数字!")
+                res.append(None)
+                continue
+
+            res.append(float(text))
+
+        if not res or None in res:
+            return CustomRecognition.AnalyzeResult(
+                box=None,
+                detail="存在无法读取到内容",
+            )
+
+        min_index = res.index(min(res))
         return CustomRecognition.AnalyzeResult(
-            box=(0, 0, 100, 100), detail="Hello World!"
+            box=rois[min_index], detail=f"最小值是 {res[min_index]}"
         )
