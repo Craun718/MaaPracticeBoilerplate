@@ -27,9 +27,6 @@ class MyRecongition(CustomRecognition):
         new_context.override_pipeline({"MyCustomOCR": {"roi": [100, 200, 300, 400]}})
         reco_detail = new_context.run_recognition("MyCustomOCR", argv.image)
 
-        click_job = context.tasker.controller.post_click(10, 20)
-        click_job.wait()
-
         context.override_next(argv.node_name, ["TaskA", "TaskB"])
 
         return CustomRecognition.AnalyzeResult(
