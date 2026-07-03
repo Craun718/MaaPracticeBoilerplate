@@ -27,7 +27,7 @@ class MyRecongition(CustomRecognition):
                 argv.image,  # 使用当前获取到的图片
                 pipeline_override={  # 临时覆盖节点参数
                     "MyCustomOCR": {  # 要覆盖的节点的名称
-                        "roi": roi,
+                        "roi": roi,  # 覆盖识别区域
                         "only_rec": True,  # 不进行文本检测，直接进行识别
                     }
                 },
