@@ -199,9 +199,9 @@ class MyCustomAction(CustomAction):
 
 ## 打包
 
-由于不能保证所有用户的电脑上都已经安装好了 Python，所以在打包过程中除了要打包 Python 代码外，还需要打包[便携式 Python 解释器](https://docs.python.org/zh-cn/3/using/windows.html#the-embeddable-package)以及用到的依赖。
+我们不能保证所有用户的电脑上都已经安装好了 Python，因此推荐的做法是直接在打包时附带上[便携式 Python 解释器](https://docs.python.org/zh-cn/3/using/windows.html#the-embeddable-package)以及需要用到的依赖。（由于打包后命令执行的对象与开发时不同，所以还要**在打包时修改** interface.json 中 agent 的 exec 字段）
 
-具体流程可以参考这几个文件： [ci 配置文件](https://github.com/duorua/narutomobile/blob/19cc32fc81ef53da2476540c48a60b72f0e07f6a/.github/workflows/install.yml#L148)、[安装 Python](https://github.com/duorua/narutomobile/blob/main/tools/ci/setup_embed_python.py)、[安装依赖](https://github.com/duorua/narutomobile/blob/main/tools/ci/download_deps.py)
+具体流程可以参考这几个文件： [ci 配置文件](https://github.com/duorua/narutomobile/blob/19cc32fc81ef53da2476540c48a60b72f0e07f6a/.github/workflows/install.yml#L148)、[安装 Python](https://github.com/duorua/narutomobile/blob/main/tools/ci/setup_embed_python.py)、[安装依赖](https://github.com/duorua/narutomobile/blob/main/tools/ci/download_deps.py)、[修改interface.json](https://github.com/duorua/narutomobile/blob/55ab710e3293bdbcee8cfb696f4607bfefc2e0c1/tools/ci/install.py#L153)
 
 > [!WARNING]  
 >
