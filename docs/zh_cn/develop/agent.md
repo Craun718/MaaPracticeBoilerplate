@@ -173,7 +173,7 @@ class MyCustomAction(CustomAction):
     ...
 ```
 
-虽然没有在 `main.py` 中进行显示调用，但这里利用了 python 的特性，在导入时会自动执行 `my_action.py` 中的 `@AgentServer.custom_action` 装饰器，将 `MyCustomAction` 注册到 `AgentServer` 中。
+虽然没有在 `main.py` 中进行显式调用，但这里利用了 Python 的特性，在导入时会自动执行 `my_action.py` 中的 `@AgentServer.custom_action` 装饰器，将 `MyCustomAction` 注册到 `AgentServer` 中。
 
 </details>
 
