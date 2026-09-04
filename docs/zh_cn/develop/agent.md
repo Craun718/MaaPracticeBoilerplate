@@ -1,17 +1,17 @@
 # AgentServer 编写指引
 
-> [!NOTE]  
+> [!NOTE]
 > Agent 属于 MaaFramework 的高级功能之一。在学习本章节以前请确保你已经掌握以下技能，否则请先学习[基础](/docs/zh_cn/develop/how_to_develop.md)的编写方法。
 >
 > - 至少熟练掌握一门编程语言，并理解面向对象的实现方法。
 > - 至少用 `Pipeline` 编写过一个完整的可用`通用UI` 执行的任务链，了解 `ProjectInterface 协议`和 `Pipeline`。
-> - 本教程推荐使用 vscode 进行编写。
+> - 本教程推荐使用 VSCode 进行编写。
 
 本教程使用 Python 编写 AgentServer 示例。如果你有面向对象编程的经验，也可选用[任意 MaaFramework 支持的编程语言](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/2.1-%E9%9B%86%E6%88%90%E6%96%87%E6%A1%A3.md)来实现，将示例代码套用到其他语言是一件很容易的事。
 
-> [!TIP]  
+> [!TIP]
 >
-> 本教程可能会使用到 python 的某些高级特性。如果你正在使用其他的编程语言，请查阅[源码](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/2.1-%E9%9B%86%E6%88%90%E6%96%87%E6%A1%A3.md)以了解某些特殊写法的差异。
+> 本教程可能会使用到 Python 的某些高级特性。如果你正在使用其他的编程语言，请查阅[源码](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/2.1-%E9%9B%86%E6%88%90%E6%96%87%E6%A1%A3.md)以了解某些特殊写法的差异。
 
 _（本篇为编写基础指引，仅介绍 custom recognition 和 custom action 的编写方法，如需了解更多，请参考 [其他内容](#其他内容)）_
 
@@ -40,7 +40,7 @@ _（本篇为编写基础指引，仅介绍 custom recognition 和 custom action
 
 本文将围绕仓库中附带的一个简单的 [demo](/agent) 示例进行讲解。
 
-在开始前，请确保你已经安装了 python 依赖。
+在开始前，请确保你已经安装了 Python 依赖。
 
 ```bash
 pip install MaaFw
@@ -59,42 +59,56 @@ pip install MaaFw
 from maa.agent.agent_server import AgentServer
 from maa.custom_recognition import CustomRecognition
 from maa.context import Context
-# 如果 vscode 在这里报错了说明你没仔细看上一步
+# 如果 VSCode 在这里报错了说明你没仔细看上一步
 
-@AgentServer.custom_recognition("my_reco_222") # 注册识别方法
-class MyRecongition(CustomRecognition):
 
+@AgentServer.custom_recognition("find_smallest_number")  # 注册识别方法
+class SmallestNumberRecognition(CustomRecognition):
     def analyze(
         self,
         context: Context,
         argv: CustomRecognition.AnalyzeArg,
     ) -> CustomRecognition.AnalyzeResult:
-        
+
         # dosomething...
 
         return CustomRecognition.AnalyzeResult(
-            box=(0, 0, 100, 100), # 传回识别到的区域
-            detail="Hello World!"
+            box=(0, 0, 100, 100),  # 传回识别到的区域
+            detail={"message": "Hello World!"},
         )
         # 或传回 None 表示识别失败
         # return CustomRecognition.AnalyzeResult(
-        #     box=None, detail="World not found!"
+        #     box=None, detail={"message": "World not found!"}
         # )
-
 ```
 
-当在 pipeline 中进入以下节点时则会调用 `MyRecongition` 的 `analyze` 方法。
+当在 pipeline 中进入 `FindSmallestNumber` 节点时，框架会按注册名调用 `SmallestNumberRecognition` 的 `analyze` 方法。
 
 ```json
 {
     ...
-    "MyTask4": {
+    "FindSmallestNumber": {
         "recognition": "Custom",
-        "custom_recognition": "my_reco_222",
+        "custom_recognition": "find_smallest_number",
+        "custom_recognition_param": {
+            "candidate_rois": [
+                [100, 100, 200, 100],
+                [300, 100, 200, 100]
+            ]
+        },
         ...
     }
 }
 ```
+
+如果需要向自定义识别传入参数，可以在 pipeline 中填写 `custom_recognition_param`。Python 侧收到的 `argv.custom_recognition_param` 是 JSON 字符串，需要自行解析：
+
+```python
+param = json.loads(argv.custom_recognition_param)
+rois = param["candidate_rois"]
+```
+
+本仓库的示例会把多个候选区域放在 `candidate_rois` 中，逐个调用 `RecognizeNumber` 节点进行 OCR，并返回数值最小的一个区域。
 
 #### 高级用法
 
@@ -109,8 +123,10 @@ class MyRecongition(CustomRecognition):
 ```python
 # my_action.py
 ...
-@AgentServer.custom_action("my_action_111")
-class MyCustomAction(CustomAction):
+
+
+@AgentServer.custom_action("click_target")
+class ClickTargetAction(CustomAction):
     def run(
         self,
         context: Context,
@@ -122,15 +138,18 @@ class MyCustomAction(CustomAction):
         return True
 ```
 
-当在 pipeline 中进入以下节点时则会调用 `MyCustomAction` 的 `run` 方法。
+当在 pipeline 中进入 `FindSmallestNumber` 节点时，框架会按注册名调用 `ClickTargetAction` 的 `run` 方法。
 
 ```json
 {
     ...
-    "MyTask4": {
+    "FindSmallestNumber": {
         ...
         "action": "Custom",
-        "custom_action": "my_action_111"
+        "custom_action": "click_target",
+        "custom_action_param": {
+            "target": [10, 20]
+        }
     }
 }
 ```
@@ -149,6 +168,7 @@ class MyCustomAction(CustomAction):
 import my_action
 import my_reco
 
+
 def main():
     ...
 
@@ -156,39 +176,37 @@ def main():
     AgentServer.join()
     AgentServer.shut_down()
 
+
 if __name__ == "__main__":
     main()
 ```
 
 <details>
-<summary>
-<b>原理说明</b>
-</summary>
+  <summary><b>原理说明</b></summary>
 
 ```python
 # my_action.py
 ...
-@AgentServer.custom_action("my_action_111")
-class MyCustomAction(CustomAction):
-    ...
+
+
+@AgentServer.custom_action("click_target")
+class ClickTargetAction(CustomAction): ...
 ```
 
-虽然没有在 `main.py` 中进行显式调用，但这里利用了 Python 的特性，在导入时会自动执行 `my_action.py` 中的 `@AgentServer.custom_action` 装饰器，将 `MyCustomAction` 注册到 `AgentServer` 中。
+虽然没有在 `main.py` 中进行显式调用，但这里利用了 Python 的特性，在导入时会自动执行 `my_action.py` 中的 `@AgentServer.custom_action` 装饰器，将 `ClickTargetAction` 注册到 `AgentServer` 中。
 
 </details>
 
 ## 调试
 
-> [!WARNING]  
+> [!WARNING]
 >
-> 本教程推荐使用 vscode 并安装 [Maa Pipeline Support 插件](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 进行调试，如果你正在使用 vscode 以外的编辑器，请查阅其他[开发工具](https://github.com/MaaXYZ/MaaFramework#%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7)的文档。
+> 本教程推荐使用 VSCode 并安装 [Maa Pipeline Support 插件](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 进行调试，如果你正在使用 VSCode 以外的编辑器，请查阅其他[开发工具](https://github.com/MaaXYZ/MaaFramework#%E5%BC%80%E5%8F%91%E5%B7%A5%E5%85%B7)的文档。
 
-在 vscode 里通过 [Maa Pipeline Support 插件](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 正常启动 pipeline 调试即可。**无需手动启动 AgentServer**
+在 VSCode 里通过 [Maa Pipeline Support 插件](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support) 正常启动 pipeline 调试即可。**无需手动启动 AgentServer**
 
 <details>
-<summary>
-<b>关于使用其他调试工具的差异</b>
-</summary>
+  <summary><b>关于使用其他调试工具的差异</b></summary>
 
 目前只有 [Maa Pipeline Support 插件](https://marketplace.visualstudio.com/items?itemName=nekosu.maa-support)支持在运行 pipeline 时自动启动 `debug session` 并自动插入 `socket id`。若要使用其他开发工具调试，请手动启动 AgentServer 并传入 socket id。
 
@@ -203,7 +221,7 @@ class MyCustomAction(CustomAction):
 
 具体流程可以参考这几个文件： [ci 配置文件](https://github.com/duorua/narutomobile/blob/19cc32fc81ef53da2476540c48a60b72f0e07f6a/.github/workflows/install.yml#L148)、[安装 Python](https://github.com/duorua/narutomobile/blob/main/tools/ci/setup_embed_python.py)、[安装依赖](https://github.com/duorua/narutomobile/blob/main/tools/ci/download_deps.py)、[修改interface.json](https://github.com/duorua/narutomobile/blob/55ab710e3293bdbcee8cfb696f4607bfefc2e0c1/tools/ci/install.py#L153)
 
-> [!WARNING]  
+> [!WARNING]
 >
 > 如果你正在使用其他编译型语言，请考虑编译链和调用包的跨平台能力。
 
