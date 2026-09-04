@@ -1,32 +1,35 @@
+import json
+
 from maa.agent.agent_server import AgentServer
 from maa.custom_recognition import CustomRecognition
 from maa.context import Context
 
 
-# 数字比大小并返回较小的
-@AgentServer.custom_recognition("my_reco_222")
-class MyRecongition(CustomRecognition):
-
+@AgentServer.custom_recognition("find_smallest_number")
+class SmallestNumberRecognition(CustomRecognition):
     def analyze(
         self,
         context: Context,
         argv: CustomRecognition.AnalyzeArg,
     ) -> CustomRecognition.AnalyzeResult:
 
-        rois = [
-            [100, 100, 200, 100],
-            [300, 100, 200, 100],
-        ]
+        param = json.loads(argv.custom_recognition_param or "{}") or {}
+        rois = param.get("candidate_rois")
+        if not isinstance(rois, list) or not rois:
+            return CustomRecognition.AnalyzeResult(
+                box=None,
+                detail={"error": "candidate_rois 不能为空"},
+            )
 
         res = []
 
         for roi in rois:
-            # 找到 pipeline 中名为 "MyCustomOCR" 的节点，并执行他的识别逻辑
+            # 找到 pipeline 中名为 "RecognizeNumber" 的节点，并执行它的识别逻辑
             reco_detail = context.run_recognition(
-                "MyCustomOCR",
+                "RecognizeNumber",
                 argv.image,  # 使用当前获取到的图片
                 pipeline_override={  # 临时覆盖节点参数
-                    "MyCustomOCR": {  # 要覆盖的节点的名称
+                    "RecognizeNumber": {  # 要覆盖的节点的名称
                         "roi": roi,  # 覆盖识别区域
                         "only_rec": True,  # 不进行文本检测，直接进行识别
                     }
@@ -39,20 +42,23 @@ class MyRecongition(CustomRecognition):
                 continue
 
             text = str(reco_detail.best_result.text)
-            if not text.isdigit():
+            try:
+                number = float(text)
+            except ValueError:
                 print(f"{text} 不是数字!")
                 res.append(None)
                 continue
 
-            res.append(float(text))
+            res.append(number)
 
         if not res or None in res:
             return CustomRecognition.AnalyzeResult(
                 box=None,
-                detail="存在无法读取到内容",
+                detail={"error": "存在无法读取到内容"},
             )
 
         min_index = res.index(min(res))
         return CustomRecognition.AnalyzeResult(
-            box=rois[min_index], detail=f"最小值是 {res[min_index]}"
+            box=rois[min_index],
+            detail={"smallest_number": res[min_index]},
         )
